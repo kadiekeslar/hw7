@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Fixer Upper</title>
+  <link rel="stylesheet" href="style.css">
+  <script type="module" src="src/main.js"></script>
+</head>
+<body>
+  <main>
+    <header><div><p class="eyebrow">A LITTLE HOUSE. A LITTLE WORK.</p><h1>Fixer Upper<span> ✦</span></h1></div><p id="counter" role="status">Repairs: 0 / 3</p></header>
+    <section class="game-shell" aria-label="House repair game">
+      <canvas id="house" width="900" height="540" aria-label="House with a drywall hole, leaking sink, and loose floorboard. Use WASD or arrow keys to move, and E to interact." tabindex="0"></canvas>
+      <p id="interaction" aria-live="polite">Walk up to a damaged object to get started.</p>
+    </section>
+    <footer><p><kbd>W A S D</kbd> / <kbd>↑ ← ↓ →</kbd> Move &nbsp; <kbd>E</kbd> Repair &nbsp; <kbd>Esc</kbd> Close task</p><p>PHASE 1 · WORK IN PROGRESS</p></footer>
+    <aside><strong>The punch list</strong><ul id="checklist"></ul><p class="note">Two repairs are playable. The pipe puzzle is the next job for the developer taking over.</p></aside>
+  </main>
+  <dialog id="repair-dialog" aria-labelledby="repair-title">
+    <div class="dialog-heading"><div><p class="eyebrow">ROLL UP YOUR SLEEVES</p><h2 id="repair-title"></h2></div><button id="close-repair" aria-label="Close repair">✕</button></div>
+    <p id="repair-instructions"></p><div id="repair-task"></div>
+  </dialog>
+  <dialog id="win-dialog" aria-labelledby="win-title"><p class="eyebrow">ONE HAPPY HOME</p><h2 id="win-title">House Repaired!</h2><p>Every job is checked off. Nice work.</p><button id="restart">Start again</button></dialog>
+</body>
+</html>
