@@ -1,8 +1,8 @@
-# Fixer Upper Rush
+# Fixer Upper
 
 ## The Game
 
-**Fixer Upper Rush** is a small house-repair game where the player moves through a run-down house and fixes different problems in each room.
+**Fixer Upper** is a small house-repair game where the player moves through a run-down house and fixes different problems in each room.
 
 The player walks around the house, finds damaged objects, and interacts with them to start a short repair task. Each repair works a little differently. For example, fixing a wall might require covering a damaged area, while fixing a leaking pipe might require rotating pipe pieces into the correct position.
 
