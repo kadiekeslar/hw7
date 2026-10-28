@@ -1,4 +1,4 @@
-import { INITIAL_ROTATIONS, pipePorts, pipesConnected } from './pipes.js';
+import { INITIAL_ROTATIONS, pipePorts, pipesConnected } from './pipes.js?v=2';
 
 // Each task calls onComplete only on success and returns cleanup for its listeners.
 // Closing a task discards its unfinished progress; completed repairs live in state.js.

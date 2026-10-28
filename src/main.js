@@ -1,6 +1,6 @@
-import { createState, movePlayer, nearestRepair, completedCount, completeRepair } from './state.js';
-import { drawHouse } from './render.js';
-import { REPAIR_TASKS } from './repairs.js';
+import { createState, movePlayer, nearestRepair, completedCount, completeRepair } from './state.js?v=2';
+import { drawHouse } from './render.js?v=2';
+import { REPAIR_TASKS } from './repairs.js?v=2';
 
 let state = createState();
 const canvas = document.querySelector('#house');

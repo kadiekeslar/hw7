@@ -1,4 +1,4 @@
-import { WORLD, FIELD_OF_VIEW, nearestRepair } from './state.js';
+import { WORLD, FIELD_OF_VIEW, nearestRepair } from './state.js?v=2';
 
 // A small software raycaster keeps this static-site game dependency-free.
 // Walls use a depth buffer so objects never show through rooms or closed walls.

@@ -18,7 +18,7 @@ python3 -m http.server 8000 --bind 127.0.0.1
 
 Open http://127.0.0.1:8000. Stop the server with Ctrl+C. On Windows, use `py` instead of `python3` if needed. If 8000 is busy, use 8001 and open that port instead. ES modules require a server; do not open `index.html` directly as a file.
 
-GitHub Pages publishes the root of `main`. Pushing to that branch starts a deployment; wait for its Actions check to succeed, then refresh the public game link.
+GitHub Pages publishes the root of `main`. Pushing to that branch starts a deployment; wait for its Actions check to succeed, then refresh the public game link. Browser entry points and module imports carry a release query (`?v=2`) to avoid mixing cached files from an older release; bump these together when publishing another code update.
 
 ## Controls and repairs
 
