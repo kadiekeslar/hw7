@@ -2,6 +2,10 @@
 
 This is a working six-repair baseline, with no downloaded assets, runtime packages, API keys, database, or build step. Extend the existing modules in small steps.
 
+**Play the current baseline here: [https://kadiekeslar.github.io/hw7/](https://kadiekeslar.github.io/hw7/).** No local server is needed just to try the existing game. Use the local setup below when you start editing.
+
+**Author's next priorities:** more visually obvious repairs and multiple floors you can travel between. These are future work: the current build has one floor and six repairs. See [Author-requested next build](#author-requested-next-build).
+
 ## Your first 10–15 minutes
 
 1. Read `SPEC.md` for the original design and priorities. The README acceptance table reports current behavior; three optional repair ideas have already been added, so winning now requires six jobs.
@@ -78,11 +82,35 @@ For the course's Phase 2, follow its instructions for saving the received, unmod
 
 The last implementation playthrough completed all six tasks and verified win/restart. The automated suite covers logic and task registrations, not task DOM interactions or visual quality.
 
-## Recommended next change
+## Author-requested next build
 
-1. **Completion timer** (a small optional feature from SPEC): track active play time in `main.js`, show it in the HUD/win dialog, pause in dialogs or when hidden, and reset on restart. Decide and document whether task time should count before implementing.
-2. **Furniture collision**: add a small set of collision rectangles to the movement layer without coupling state to WebGL. Verify every repair stays reachable.
-3. **Audio or task feedback**: add explicit player controls for sound, or brief visible feedback. Keep browser audio activation rules in mind.
+The author requested these additions, then explicitly asked to leave them as work for the next person. They are **not implemented** and are additional guidance alongside the unchanged SPEC.md.
+
+### 1. Make unfinished repairs unmistakable
+
+**Intent:** "I can see it and know it needs fixed." Players should not have to scan the room waiting for an E prompt to discover damage.
+
+Start in `buildRepair` in `src/scene.js`: make broken appearances more noticeable while preserving their fixed variants. Consider larger wall holes/exposed studs, a visible water stream and puddle, lifted or missing floor planks, cracked/missing glass, a visibly crooked cabinet door, and a dark lamp with a recognizable broken bulb. Add clear labels or markers if needed; communicate with shape/text as well as color. Keep a visible distinction after completion, and remove the unfinished label/marker.
+
+Useful checks: someone new to the game can identify an unfinished job from ordinary walking distance; nearby E instructions name the right job; walls hide labels for objects in another room; completing the repair visibly resolves the damage and updates/removes the marker.
+
+### 2. Add multiple accessible floors
+
+**Intent:** the player can explore more than one level of the house, with an obvious way to go up and back down, such as stairs. The author did not prescribe an exact floor count, stair mechanic, or extra repair count; choose a scope that fits the available build time.
+
+Suggested implementation path:
+
+- Add explicit floor identity to game state, repair locations, and floor layouts in `src/state.js`. Reusing a repair task on a second floor needs a unique repair ID; separate its task/model type from its instance ID if needed. Currently `main.js` and `buildRepair` use the ID directly, so review those lookups together.
+- Give stairs a recognizable model and clear controls. Put the player at a safe arrival point on the destination floor. Either continuous stair movement or an explicit stair interaction is an implementation choice; document what you build.
+- Update movement collision, line-of-sight checks, and repair selection to use the active floor. An upstairs job must never open from downstairs just because its X/Y coordinates match.
+- Extend `src/render.js` and `src/scene.js` for each floor's surfaces, rooms, furnishings, stairs, and repairs. Show the current floor and update the floor plan/repair labels. Review the fixed-position model/light traps above before reusing or moving a fixture.
+- Keep all repair state across floor changes. Count each job once toward the global win condition, and reset every floor and the starting position on restart.
+
+Useful checks: reach the upper floor and return; walls/arrival positions are safe; repaired objects stay fixed after a round trip; interaction and markers belong to the current floor; the total/win condition includes all required jobs; restart resets both levels. Extend the reachability tests to cover each floor.
+
+### If time remains
+
+Consider furniture collision, a completion timer, or audio after the two requested improvements. Keep the original working tasks and document partial work honestly if time runs short.
 
 ## Publishing and cache
 

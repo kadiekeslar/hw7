@@ -102,10 +102,14 @@ npm run check
 
 A fresh export of the tracked repository files (without `.git` or `node_modules`) also passed `npm run check` and opened through the documented Python server. The clean-copy browser check verified 3D rendering, movement, proximity interaction, cancelling a partial floorboard task without counting it, and reopening with its progress reset.
 
-## Possible next work
+## Author-requested next work (not implemented)
 
-1. Playtest movement speed, interaction range, and puzzle difficulty with another person.
-2. Add furniture collision without blocking paths to repairs; improve near-camera object clipping.
-3. Add the optional completion timer, then audio or more detailed graphics if class time remains.
+These requests are for the next developer to build. The current game still has **one floor and six playable repairs**; the original SPEC.md is unchanged.
+
+1. **Make repairs obvious at a glance.** The player should see a damaged object and understand it needs fixing before discovering the E prompt. Emphasize visible holes, cracks, leaks/puddles, raised boards, a hanging cabinet door, and a dark/broken lamp. Clear repair labels or markers can reinforce the damage. Repaired objects should look clearly fixed and lose their unfinished marker.
+2. **Add multiple floors the player can visit.** Build an upstairs and a clear way to travel between levels, such as stairs. Give each floor rooms and repair locations, identify the current floor, and preserve repair progress when changing floors. Keep collision, repair selection, the floor plan, win count, and restart consistent across levels.
+3. Playtest those changes, then consider furniture collision, the optional timer, audio, or further visual detail.
+
+**For the next person:** you can play the current working baseline immediately at **https://kadiekeslar.github.io/hw7/**. Local setup is only needed to develop your changes. See [CONTRIBUTING.md](CONTRIBUTING.md#author-requested-next-build) for implementation starting points and checks. If you publish your own repository, give it its own Pages link; the URL above serves this original repository.
 
 The current checkpoint is ready for another developer to extend. Keep the original `SPEC.md` as the design baseline; this README records the actual implemented scope and remaining limitations. Follow the course instructions for creating an unmodified baseline in your own Phase 2 repository before making changes. Review the next-developer guide for concrete starting points.

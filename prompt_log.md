@@ -66,3 +66,16 @@ Replaced the raycast sprites with a dependency-free WebGL scene using solid 3D g
 ### Result (assistant summary)
 
 Reviewed the current setup instructions, code map, task lifecycle, tests, prompt log, and known limits. Formatted source consistently with Prettier 3.6.2 without adding a runtime dependency. Added CONTRIBUTING.md with a first-session checklist, exact steps for adding a repair, rendering/collision coordinate conventions and traps, and a manual smoke checklist. Removed an unused old raycaster FOV constant and named the active WebGL FOV. Made the repair-registry/reachability tests use current state values so they support future additions. Added npm run check for syntax plus tests. Preserved SPEC.md and existing gameplay. A fresh export without .git or node_modules passed npm run check; its browser smoke check verified rendering, movement, repair opening, cancellation without counting, and reset on reopening before pushing the checkpoint.
+
+
+## Requested future features (verbatim)
+
+> i want it to have multiple floors you cann go to and more obvious repairs like i can see it and know it needs fixed also the next person should kmnow you can use [https://kadiekeslar.github.io/hw7/](https://kadiekeslar.github.io/hw7/)
+
+The author then clarified (verbatim):
+
+> just add this all in the stuff for the next person to builf
+
+### Result (assistant summary)
+
+Documentation only: added the author's multiple-floor and obvious-damage requests to README.md and CONTRIBUTING.md as future work, with implementation starting points and suggested verification checks. Made the existing public play link prominent for the next developer. Clearly stated that the current baseline remains one floor with six repairs. No gameplay or SPEC.md changes were made for these requests.
