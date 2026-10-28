@@ -100,6 +100,8 @@ npm run check
 
 `npm run check` checks syntax in every source module and runs the same eight tests as `npm test`. Eight tests pass, covering the logic listed in the code map. Browser playthrough verified walking through connected rooms, approaching all six jobs, completing all six tasks (including staged pane removal/installation, level-before-screws, and ordered bulb replacement), reaching the win dialog after the sixth repair, and restarting to 0 / 6. Keyboard turning works in the preview. Mouse capture is optional; test mouse look in your own desktop browser because embedded-browser support varies.
 
+A fresh export of the tracked repository files (without `.git` or `node_modules`) also passed `npm run check` and opened through the documented Python server. The clean-copy browser check verified 3D rendering, movement, proximity interaction, cancelling a partial floorboard task without counting it, and reopening with its progress reset.
+
 ## Possible next work
 
 1. Playtest movement speed, interaction range, and puzzle difficulty with another person.
