@@ -24,7 +24,7 @@ The repository link in the prompt was https://github.com/kadiekeslar/hw7. The us
 
 Read the existing SPEC.md before implementing. Confirmed the public repo's first commit contains only SPEC.md and preserved that history. Kept the spec unchanged. Built plain browser JavaScript with separate state, rendering, task and input modules. Scoped this first pass to movement, interaction, two complete tasks, and an explicit unfinished plumbing task so another developer has a meaningful next step. Added an honest acceptance table and four pure-state tests. Browser check completed the floorboard and drywall and reached 2 / 3.
 
-Continue appending future significant prompts verbatim, with their model/tool and result. This file currently records only the first implementation request.
+Subsequent important user prompts are recorded below verbatim. Result sections are assistant-written implementation summaries, not user prompts.
 
 
 ## Follow-up user prompt (verbatim)
@@ -57,3 +57,12 @@ Explained GitHub Pages configuration. The author enabled Pages on main/root; the
 ### Result (assistant summary)
 
 Replaced the raycast sprites with a dependency-free WebGL scene using solid 3D geometry, procedural wood/tile/fabric/plaster materials, room furnishings, appliances, windows, trim, and warm lighting. Kept the state/movement, original repairs, task registry and win flow. Added three interactive repairs: removing/replacing four window panes, leveling a cabinet and tightening its screws, and replacing a lamp bulb through ordered steps. Completion now requires all six repairs. Kept SPEC.md unchanged and documented expanded scope and remaining limits in README.md. Automated checks cover reachability and the six-task registry; a browser playthrough completed all six repairs and reached the win screen.
+
+
+## Handoff preparation prompt (verbatim)
+
+> make sure everything is easy and ready to hand off, it should be ready for the next person to start adding to it
+
+### Result (assistant summary)
+
+Reviewed the current setup instructions, code map, task lifecycle, tests, prompt log, and known limits. Formatted source consistently with Prettier 3.6.2 without adding a runtime dependency. Added CONTRIBUTING.md with a first-session checklist, exact steps for adding a repair, rendering/collision coordinate conventions and traps, and a manual smoke checklist. Removed an unused old raycaster FOV constant and named the active WebGL FOV. Made the repair-registry/reachability tests use current state values so they support future additions. Added npm run check for syntax plus tests. Preserved SPEC.md and existing gameplay; verified the handoff checkpoint before pushing it.

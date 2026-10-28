@@ -4,6 +4,8 @@ Designed by Kadie Keslar. A small house-repair game based on the original, uncha
 
 **Play online:** https://kadiekeslar.github.io/hw7/
 
+**Taking over development?** Read `SPEC.md`, run the game using the steps below, then read [CONTRIBUTING.md](CONTRIBUTING.md) for the first-session checklist, exact extension steps, and code traps.
+
 Walk through a first-person house and finish six jobs: patch drywall, fix the kitchen sink, secure a floorboard, replace a broken window, straighten a cabinet door, and replace a lamp bulb. All six repairs are playable. Completing them shows **House Repaired!** and a restart button.
 
 ## Run locally
@@ -61,14 +63,16 @@ Requires WebGL (normally enabled in current desktop browsers). The small floor p
 ## Code map
 
 - `index.html`: game canvas, progress/checklist, repair and win dialogs.
-- `style.css`: page layout, dialogs, drywall grid, nail targets, pipe tiles.
+- `style.css`: page layout, HUD, dialogs, and all six repair task styles.
 - `src/state.js`: tile map, fresh state, camera-relative movement, circle/wall collision, line of sight, interaction selection, completion count. Pure functions independent of browser APIs.
 - `src/render.js`: dependency-free WebGL renderer, mesh geometry, camera matrices, materials, procedural textures, lighting, and floor plan. Uses depth-tested solid geometry and a true perspective camera with vertical mouse look.
 - `src/scene.js`: furniture and repair models built from boxes/cylinders. `buildScene` creates static furnishings; `buildRepair` creates broken/repaired fixtures. Change the house décor here.
 - `src/repairs.js`: task registry and DOM mini-games. Each task receives `(container, onComplete)` and returns cleanup; success updates the shared state in `main.js`.
 - `src/pipes.js`: pipe orientations and inlet-to-outlet connection validation for the fixed 2×2 puzzle.
 - `src/main.js`: input, pointer lock, animation loop, task lifecycle, progress UI, win/restart.
-- `tests/state.test.js`: collision, doorway passage, diagonal speed, interaction visibility, repair reachability, duplicate completion/reset, pipe success and failure cases, and a task-registry check for all six repair IDs.
+- `tests/state.test.js`: collision, doorway passage, diagonal speed, interaction visibility, repair reachability, duplicate completion/reset, pipe success and failure cases, and the repair registry. Tests derive the spawn, repair count and interaction range from state so a new repair does not require changing those assertions.
+- `CONTRIBUTING.md`: next-developer walkthrough, repair extension recipe, architecture traps, and manual validation checklist.
+- `prompt_log.md`: important user prompts verbatim and clearly labeled implementation summaries.
 
 ## Changes after the initial foundation
 
@@ -91,10 +95,10 @@ The scene has room-specific wood/tile surfaces, door trim, molding, windows and 
 Optional automated checks require Node.js 18 or later; no npm install:
 
 ```sh
-npm test
+npm run check
 ```
 
-Eight tests pass, covering the logic listed in the code map. Browser playthrough verified walking through connected rooms, approaching all three jobs, completing all six tasks (including staged pane removal/installation, level-before-screws, and ordered bulb replacement), reaching the win dialog after the sixth repair, and restarting to 0 / 6. Keyboard turning works in the preview. Mouse capture is optional; test mouse look in your own desktop browser because embedded-browser support varies.
+`npm run check` checks syntax in every source module and runs the same eight tests as `npm test`. Eight tests pass, covering the logic listed in the code map. Browser playthrough verified walking through connected rooms, approaching all six jobs, completing all six tasks (including staged pane removal/installation, level-before-screws, and ordered bulb replacement), reaching the win dialog after the sixth repair, and restarting to 0 / 6. Keyboard turning works in the preview. Mouse capture is optional; test mouse look in your own desktop browser because embedded-browser support varies.
 
 ## Possible next work
 
@@ -102,4 +106,4 @@ Eight tests pass, covering the logic listed in the code map. Browser playthrough
 2. Add furniture collision without blocking paths to repairs; improve near-camera object clipping.
 3. Add the optional completion timer, then audio or more detailed graphics if class time remains.
 
-Before the class handoff, review this documentation and the prompt log, then make the final commit/push within the class period.
+The current checkpoint is ready for another developer to extend. Keep the original `SPEC.md` as the design baseline; this README records the actual implemented scope and remaining limitations. Follow the course instructions for creating an unmodified baseline in your own Phase 2 repository before making changes. Review the next-developer guide for concrete starting points.

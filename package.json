@@ -2,5 +2,8 @@
   "name": "fixer-upper",
   "private": true,
   "type": "module",
-  "scripts": { "test": "node --test" }
+  "scripts": {
+    "test": "node --test",
+    "check": "node --check src/main.js && node --check src/state.js && node --check src/render.js && node --check src/scene.js && node --check src/repairs.js && node --check src/pipes.js && node --test"
+  }
 }
