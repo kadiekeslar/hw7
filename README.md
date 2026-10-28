@@ -4,7 +4,7 @@ Designed by Kadie Keslar. A small house-repair game based on the original, uncha
 
 **Play online:** https://kadiekeslar.github.io/hw7/
 
-Walk through a first-person house and finish three jobs: patch drywall in the workroom, fix the kitchen sink, and secure a loose living-room floorboard. All three repairs are playable. Completing them shows **House Repaired!** and a restart button.
+Walk through a first-person house and finish six jobs: patch drywall, fix the kitchen sink, secure a floorboard, replace a broken window, straighten a cabinet door, and replace a lamp bulb. All six repairs are playable. Completing them shows **House Repaired!** and a restart button.
 
 ## Run locally
 
@@ -18,7 +18,7 @@ python3 -m http.server 8000 --bind 127.0.0.1
 
 Open http://127.0.0.1:8000. Stop the server with Ctrl+C. On Windows, use `py` instead of `python3` if needed. If 8000 is busy, use 8001 and open that port instead. ES modules require a server; do not open `index.html` directly as a file.
 
-GitHub Pages publishes the root of `main`. Pushing to that branch starts a deployment; wait for its Actions check to succeed, then refresh the public game link. Browser entry points and module imports carry a release query (`?v=2`) to avoid mixing cached files from an older release; bump these together when publishing another code update.
+GitHub Pages publishes the root of `main`. Pushing to that branch starts a deployment; wait for its Actions check to succeed, then refresh the public game link. Browser entry points and module imports carry a release query (`?v=3`) to avoid mixing cached files from an older release; bump these together when publishing another code update.
 
 ## Controls and repairs
 
@@ -28,11 +28,13 @@ GitHub Pages publishes the root of `main`. Pushing to that branch starts a deplo
 - Click the game view: capture the mouse to look around. Esc releases the mouse. Click the view again to resume mouse look. Arrow-key turning works without mouse capture.
 - E: start a nearby unfinished repair you are facing. You cannot interact through a wall.
 - Esc or the close button in a repair: leave the task; unfinished task progress resets.
-- Complete all three repairs, then choose **Start again** to reset the house and your position. Refresh also resets progress.
+- Complete all six repairs, then choose **Start again** to reset the house and your position. Refresh also resets progress.
 
-The small floor plan in the upper right shows walls, your position and viewing direction. Orange marks are unfinished jobs; green marks are completed jobs. Opening a repair releases the mouse and pauses movement.
+Requires WebGL (normally enabled in current desktop browsers). The small floor plan in the upper right shows walls, your position and viewing direction. Orange marks are unfinished jobs; green marks are completed jobs. Opening a repair releases the mouse and pauses movement.
 
 **Drywall:** click all 40 dark areas, or hold the left mouse button and sweep across them. **Floorboard:** click all four nail locations. **Pipe:** rotate the four pipe tiles clockwise until water can travel from the left edge of the top-left tile, across the top row, down the right side, and across the bottom row to the left outlet. Completion is automatic once connected.
+
+**Window:** remove all four cracked panes, then click the four empty frames to fit new panes. **Cabinet:** level the door with the slider (within 1° of zero), then turn each of three screws three times. Alignment locks once you start tightening. **Lamp:** switch off the lamp, remove the old bulb, fit a new bulb, and switch it back on, in that order. The repaired lamp adds warm light to the dining room.
 
 ## Acceptance criteria from SPEC.md
 
@@ -40,8 +42,8 @@ The small floor plan in the upper right shows walls, your position and viewing d
 |---|---|---|
 | 1 | Met | Opens directly into a first-person house with connected rooms. |
 | 2 | Met | WASD walks; arrows provide forward/backward movement and turning. |
-| 3 | Met | Player collision blocks outside walls, interior walls, and corners. |
-| 4 | Met | Damaged drywall, a leaking sink/pipe, and a loose floorboard are present in separate areas. |
+| 3 | Met | Player collision blocks outside walls, interior walls, and corners. Doorways connect the rooms. |
+| 4 | Met | The three original jobs and three additional repairs are present across the house. |
 | 5 | Met | Facing a nearby unfinished object shows an E prompt. |
 | 6 | Met | E opens that object's playable repair task. |
 | 7 | Met | Drywall requires covering 40 areas. |
@@ -51,9 +53,9 @@ The small floor plan in the upper right shows walls, your position and viewing d
 | 11 | Met | Floorboard requires four separate nail targets. |
 | 12 | Met | The repaired board changes its surface and gains secured nail marks. |
 | 13 | Met | Completed objects cannot be selected again; completion is counted once. |
-| 14 | Met | Counter starts at 0 / 3. |
+| 14 | Met | Counter starts at 0 / 6. |
 | 15 | Met | Each successful task increments the counter once. |
-| 16 | Met | Completing the third repair opens House Repaired! |
+| 16 | Met | Completing all six repairs opens House Repaired! |
 | 17 | Met | Start again resets all repairs, counter, position, and view direction. |
 
 ## Code map
@@ -61,25 +63,28 @@ The small floor plan in the upper right shows walls, your position and viewing d
 - `index.html`: game canvas, progress/checklist, repair and win dialogs.
 - `style.css`: page layout, dialogs, drywall grid, nail targets, pipe tiles.
 - `src/state.js`: tile map, fresh state, camera-relative movement, circle/wall collision, line of sight, interaction selection, completion count. Pure functions independent of browser APIs.
-- `src/render.js`: dependency-free first-person software raycaster. Casts walls into a column depth buffer, projects floor polygons, and draws procedural object sprites with wall occlusion. Also draws the held hammer, crosshair, room name and floor plan.
+- `src/render.js`: dependency-free WebGL renderer, mesh geometry, camera matrices, materials, procedural textures, lighting, and floor plan. Uses depth-tested solid geometry and a true perspective camera with vertical mouse look.
+- `src/scene.js`: furniture and repair models built from boxes/cylinders. `buildScene` creates static furnishings; `buildRepair` creates broken/repaired fixtures. Change the house décor here.
 - `src/repairs.js`: task registry and DOM mini-games. Each task receives `(container, onComplete)` and returns cleanup; success updates the shared state in `main.js`.
 - `src/pipes.js`: pipe orientations and inlet-to-outlet connection validation for the fixed 2×2 puzzle.
 - `src/main.js`: input, pointer lock, animation loop, task lifecycle, progress UI, win/restart.
-- `tests/state.test.js`: collision, doorway passage, diagonal speed, interaction visibility, repair reachability, duplicate completion/reset, pipe success and failure cases.
+- `tests/state.test.js`: collision, doorway passage, diagonal speed, interaction visibility, repair reachability, duplicate completion/reset, pipe success and failure cases, and a task-registry check for all six repair IDs.
 
 ## Changes after the initial foundation
 
-The initial Phase 1 checkpoint had a top-down room and two playable tasks. At the author's request, this version adds the pipe puzzle and replaces the top-down rendering/movement with an eye-level, first-person house. The existing drywall and floorboard tasks, task registry, shared repair state, counter and dialog lifecycle were extended. The original spec remains unchanged.
+The initial Phase 1 checkpoint had a top-down room and two playable tasks. At the author's request, a later version completed plumbing and added first-person exploration. This version responds to the author's next request for a more realistic house and more repairs: it upgrades the renderer from flat raycast sprites to solid 3D WebGL furniture and architecture, and adds window, cabinet, and lamp tasks. The existing state/movement, original mini-games, task lifecycle, counters, and win/restart logic were extended. The original spec remains unchanged; the added jobs expand the required count to six.
+
+The scene has room-specific wood/tile surfaces, door trim, molding, windows and curtains, a kitchen with cabinets/oven/refrigerator, a sofa and coffee table, bookshelves, workbench, dining table/chairs, plants and framed art. Lamp completion changes the local light as well as the object appearance.
 
 ## Known limits and shortcuts
 
-- Rendering is a lightweight raycast perspective with pixel graphics, fixed-height walls and camera-facing object sprites; it does not implement Minecraft's block-building, jumping, or fully modeled 3D furniture.
-- Walls block movement; decorative furniture and repair props can be walked through. Objects can disappear when you stand directly inside them. Back up to view/interact with them.
+- Rendering uses solid 3D boxes/cylinders and procedural materials. It is a stylized house, with approximate lighting and contact-shadow patches, not photorealistic graphics or a Minecraft block-building system. Walls have a fixed 2.8m height; there is no jumping.
+- Walls block movement; decorative furniture and repair props can be walked through. At very close range, the camera can clip inside a prop. Back up to inspect it. Props do not block interaction; walls do.
 - Keyboard and mouse are required; there are no touch movement controls.
-- Mouse look depends on browser pointer-lock support and permission. Use arrow-key turning if capture is unavailable. Up/down mouse look is a limited vertical view offset.
+- Mouse look depends on browser pointer-lock support and permission. Use arrow-key turning if capture is unavailable. Vertical mouse look rotates the 3D camera and is clamped to a comfortable range.
 - Unfinished tasks reset on close. Refresh loses all progress. No save system.
 - Drywall uses a cell grid and each nail needs one click. The pipe puzzle has a fixed layout, not procedural generation.
-- Timer, budget, extra repair types, and sound remain unimplemented optional features from the spec.
+- Timer, budget, sound, and additional repairs beyond the six jobs remain optional future work. The three added tasks implement the spec's optional window/cabinet/light ideas.
 
 ## Validation
 
@@ -89,12 +94,12 @@ Optional automated checks require Node.js 18 or later; no npm install:
 npm test
 ```
 
-Seven tests pass, covering the logic listed in the code map. Browser playthrough verified walking through connected rooms, approaching all three jobs, completing drywall/floorboard/plumbing, reaching the win dialog, and restarting to 0 / 3. Keyboard turning was checked separately. Mouse capture is optional; test mouse look in your own desktop browser because embedded-browser support varies.
+Eight tests pass, covering the logic listed in the code map. Browser playthrough verified walking through connected rooms, approaching all three jobs, completing all six tasks (including staged pane removal/installation, level-before-screws, and ordered bulb replacement), reaching the win dialog after the sixth repair, and restarting to 0 / 6. Keyboard turning works in the preview. Mouse capture is optional; test mouse look in your own desktop browser because embedded-browser support varies.
 
 ## Possible next work
 
 1. Playtest movement speed, interaction range, and puzzle difficulty with another person.
-2. Give furniture collision and improve object rendering at very close range.
+2. Add furniture collision without blocking paths to repairs; improve near-camera object clipping.
 3. Add the optional completion timer, then audio or more detailed graphics if class time remains.
 
 Before the class handoff, review this documentation and the prompt log, then make the final commit/push within the class period.

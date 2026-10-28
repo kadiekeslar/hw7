@@ -44,3 +44,29 @@ main { max-width: 1240px; }
 .port-2 { left: 40%; top: 50%; width: 20%; height: 50%; }
 .port-3 { left: 0; top: 40%; width: 50%; height: 20%; }
 .pipe-joint { position: absolute; left: 38%; top: 38%; width: 24%; height: 24%; border-radius: 50%; border: 4px solid #91bdc5; background: #5b93a5; }
+
+/* The house now uses solid 3D geometry; HUD stays sharp above the WebGL canvas. */
+.viewport { position: relative; overflow: hidden; border-radius: 6px; background: #b6b6a6; }
+#house { aspect-ratio: 5 / 3; outline-offset: -3px; }
+.room-label { position: absolute; left: 16px; top: 14px; padding: 8px 12px; background: #253b32b8; color: #fff7e5; font-size: 11px; letter-spacing: 1px; pointer-events: none; border-radius: 4px; }
+#floor-plan { position: absolute; right: 12px; top: 12px; width: 110px; height: auto; border: 3px solid #fff9e8bb; border-radius: 4px; pointer-events: none; }
+#crosshair { position: absolute; left: 50%; top: 50%; transform: translate(-50%,-50%); font: 24px monospace; color: #fffbe5bb; text-shadow: 0 1px 3px #28362b; pointer-events: none; }
+#crosshair.ready { color: #ffd37e; }
+#look-hint { position: absolute; bottom: 12px; left: 50%; transform: translateX(-50%); margin: 0; white-space: nowrap; background: #263e34b8; color: #fff6e2; padding: 7px 13px; font-size: 12px; border-radius: 4px; pointer-events: none; }
+.window-panes { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding: 16px; background: #ac9878; border: 8px solid #7d6851; }
+.glass-pane { height: 110px; font-size: 35px; background: linear-gradient(135deg,#a9cdd1,#d6e3d8); color: #385656; }
+.glass-pane.cracked { background: repeating-linear-gradient(135deg,#99b6ba 0 28px,#557775 29px 31px,#a5c0c3 32px 65px); }
+.glass-pane.empty { background: #3e504a; }
+.glass-pane.fitted { background: linear-gradient(135deg,#e2f0e2,#9cc6cb); }
+.cabinet-preview { height: 185px; width: 165px; padding: 10px; background: #536650; margin: 10px auto 24px; }
+.cabinet-door { height: 100%; background: #a3b390; border: 12px ridge #879a74; box-shadow: 2px 5px 8px #25352466; position: relative; }
+.cabinet-door::after { content: ''; position: absolute; right: 4px; top: 35%; height: 35px; width: 5px; background: #d6c593; }
+.cabinet-task label { display: block; font-weight: 650; }
+.cabinet-task input { width: 100%; accent-color: #5c7c60; margin: 15px 0; }
+.screw-targets { display: flex; justify-content: space-between; gap: 8px; }
+.screw-targets button { font-size: 13px; }
+button:disabled { cursor: default; opacity: .58; }
+.lamp-task { display: flex; flex-direction: column; gap: 10px; }
+.bulb-preview { width: 90px; height: 100px; border-radius: 50% 50% 25% 25%; background: #bbb6a4; margin: auto; text-align: center; padding-top: 15px; font-size: 50px; color: #6c7166; }
+.bulb-preview.new-bulb { background: #f3db92; box-shadow: 0 0 40px #efce7f80; }
+@media (max-width: 600px) { #floor-plan { width: 70px; right: 7px; top: 7px; } .room-label { left: 7px; top: 7px; font-size: 8px; padding: 5px; } #look-hint { font-size: 9px; padding: 5px; bottom: 6px; } }

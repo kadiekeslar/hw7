@@ -51,7 +51,7 @@ test('completion is counted once and new game resets all objects', () => {
     assert.equal(completeRepair(state,repair.id),true);
     assert.equal(completeRepair(state,repair.id),false);
   }
-  assert.equal(completedCount(state),3);
+  assert.equal(completedCount(state),state.repairs.length);
   assert.equal(completedCount(createState()),0);
   assert.equal(completeRepair(state,'missing'),false);
 });
@@ -61,4 +61,13 @@ test('pipe puzzle starts unsolved, accepts its continuous route, rejects any bro
   assert.equal(pipesConnected(solution),true);
   for(let i=0;i<4;i++) {const broken=[...solution];broken[i]=(broken[i]+1)%4;assert.equal(pipesConnected(broken),false);}
   assert.deepEqual(pipePorts(0,1),[2,0]);
+});
+
+
+test('all six repair locations have registered playable tasks', async () => {
+  const { REPAIR_TASKS } = await import('../src/repairs.js');
+  const state=createState();
+  assert.equal(state.repairs.length,6);
+  assert.equal(new Set(state.repairs.map(r=>r.id)).size,6);
+  for(const repair of state.repairs) assert.equal(typeof REPAIR_TASKS[repair.id]?.start,'function',repair.id);
 });

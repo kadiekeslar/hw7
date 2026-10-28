@@ -1,193 +1,202 @@
-import { WORLD, FIELD_OF_VIEW, nearestRepair } from './state.js?v=2';
+import { WORLD, nearestRepair } from './state.js?v=3';
+import { buildScene, buildRepair } from './scene.js?v=3';
 
-// A small software raycaster keeps this static-site game dependency-free.
-// Walls use a depth buffer so objects never show through rooms or closed walls.
-const WIDTH = 600, HEIGHT = 360;
-const surface = document.createElement('canvas'); surface.width = WIDTH; surface.height = HEIGHT;
-const view = surface.getContext('2d');
-const FOCAL = WIDTH / (2 * Math.tan(FIELD_OF_VIEW / 2));
-const wallDepth = new Float32Array(WIDTH);
-const textures = new Map();
-const sprites = new Map();
+const WALL_HEIGHT = 2.8;
+const EYE_HEIGHT = 1.62;
+const hex = value => [1,3,5].map(index => parseInt(value.slice(index,index+2),16)/255);
 
-function texture(room) {
-  if (textures.has(room)) return textures.get(room);
-  const tile = document.createElement('canvas'); tile.width = tile.height = 64;
-  const c = tile.getContext('2d');
-  c.fillStyle = room === 'kitchen' ? '#cbd4bc' : '#e6d9bb'; c.fillRect(0, 0, 64, 64);
-  // Wallpaper seams, picture rail, wood wainscoting, and baseboards.
-  c.fillStyle = '#ffffff18'; for (let x = 0; x < 64; x += 8) c.fillRect(x, 0, 1, 40);
-  c.fillStyle = room === 'kitchen' ? '#748d79' : '#6d867c'; c.fillRect(0, 41, 64, 23);
-  c.fillStyle = '#ffffff22'; for (let x = 0; x < 64; x += 16) c.fillRect(x, 44, 1, 17);
-  c.fillStyle = '#d8cba6'; c.fillRect(0, 39, 64, 3);
-  c.fillStyle = '#42574d'; c.fillRect(0, 61, 64, 3);
-  c.fillStyle = '#655747'; c.fillRect(0, 0, 64, 2);
-  textures.set(room, tile); return tile;
+// Column-major matrices, matching WebGL uniforms. World Y points up; map Y is world Z.
+function multiply(a,b) {
+  const out=new Float32Array(16);
+  for(let column=0;column<4;column++) for(let row=0;row<4;row++) for(let i=0;i<4;i++) out[column*4+row]+=a[i*4+row]*b[column*4+i];
+  return out;
+}
+function perspective(aspect) {
+  const f=1/Math.tan(Math.PI/6),near=.05,far=45;
+  return new Float32Array([f/aspect,0,0,0, 0,f,0,0, 0,0,(far+near)/(near-far),-1, 0,0,2*far*near/(near-far),0]);
+}
+function camera(player) {
+  const {x,y:z,angle,pitch}=player;
+  const right=[-Math.sin(angle),0,Math.cos(angle)];
+  const forward=[Math.cos(angle)*Math.cos(pitch),Math.sin(pitch),Math.sin(angle)*Math.cos(pitch)];
+  const back=forward.map(n=>-n);
+  const up=[back[1]*right[2],back[2]*right[0]-back[0]*right[2],-back[1]*right[0]];
+  const dot=v=>v[0]*x+v[1]*EYE_HEIGHT+v[2]*z;
+  return new Float32Array([right[0],up[0],back[0],0, right[1],up[1],back[1],0, right[2],up[2],back[2],0, -dot(right),-dot(up),-dot(back),1]);
+}
+function model(item) {
+  const a=item.angle||0,c=Math.cos(a),s=Math.sin(a);
+  return new Float32Array([c*item.w,0,-s*item.w,0, 0,item.h,0,0, s*item.d,0,c*item.d,0, item.x,item.y,item.z,1]);
 }
 
-function makeSprite(kind, repaired = false) {
-  const key = `${kind}-${repaired}`;
-  if (sprites.has(key)) return sprites.get(key);
-  const tile = document.createElement('canvas'); tile.width = 160; tile.height = 180;
-  const c = tile.getContext('2d');
-  if (kind === 'drywall') {
-    c.fillStyle = '#d9cba8'; c.fillRect(12, 18, 136, 145);
-    c.strokeStyle = '#b6a587'; c.lineWidth = 3; c.strokeRect(12, 18, 136, 145);
-    if (repaired) {
-      c.fillStyle = '#f1e9d3'; c.fillRect(30, 37, 100, 105);
-      c.strokeStyle = '#d4cbb5'; c.strokeRect(30, 37, 100, 105);
-    } else {
-      c.fillStyle = '#4b3b31'; c.beginPath();
-      [[30,58],[56,43],[78,58],[110,44],[129,72],[117,104],[125,130],[83,143],[65,127],[34,133],[42,100]].forEach(([x,y],i) => i ? c.lineTo(x,y) : c.moveTo(x,y)); c.closePath(); c.fill();
-      c.fillStyle = '#85644d'; c.fillRect(60, 56, 10, 75); c.fillRect(100, 58, 9, 75);
-      c.strokeStyle = '#7d6854'; c.lineWidth = 2; c.beginPath(); c.moveTo(30,58); c.lineTo(21,36); c.moveTo(125,130); c.lineTo(145,149); c.stroke();
+function geometry(kind) {
+  const data=[];
+  const vertex=(p,n,u,v)=>data.push(...p,...n,u,v);
+  const quad=(points,normal)=>{
+    for(const i of [0,1,2,0,2,3]) vertex(points[i],normal, [0,1,1,0][i], [0,0,1,1][i]);
+  };
+  if(kind==='box') {
+    quad([[-.5,-.5,.5],[.5,-.5,.5],[.5,.5,.5],[-.5,.5,.5]],[0,0,1]);
+    quad([[.5,-.5,-.5],[-.5,-.5,-.5],[-.5,.5,-.5],[.5,.5,-.5]],[0,0,-1]);
+    quad([[.5,-.5,.5],[.5,-.5,-.5],[.5,.5,-.5],[.5,.5,.5]],[1,0,0]);
+    quad([[-.5,-.5,-.5],[-.5,-.5,.5],[-.5,.5,.5],[-.5,.5,-.5]],[-1,0,0]);
+    quad([[-.5,.5,.5],[.5,.5,.5],[.5,.5,-.5],[-.5,.5,-.5]],[0,1,0]);
+    quad([[-.5,-.5,-.5],[.5,-.5,-.5],[.5,-.5,.5],[-.5,-.5,.5]],[0,-1,0]);
+  } else {
+    for(let i=0;i<20;i++) {
+      const a=i*Math.PI/10,b=(i+1)*Math.PI/10;
+      const p=[Math.cos(a)*.5,Math.sin(a)*.5],q=[Math.cos(b)*.5,Math.sin(b)*.5];
+      const n=[Math.cos((a+b)/2),0,Math.sin((a+b)/2)];
+      quad([[p[0],-.5,p[1]],[q[0],-.5,q[1]],[q[0],.5,q[1]],[p[0],.5,p[1]]],n);
+      for(const [sign,order] of [[1,[p,q]],[-1,[q,p]]]) {
+        vertex([0,sign*.5,0],[0,sign,0],.5,.5);
+        for(const r of order) vertex([r[0],sign*.5,r[1]],[0,sign,0],r[0]+.5,r[1]+.5);
+      }
     }
-  } else if (kind === 'pipe') {
-    if (!repaired) { c.fillStyle = '#75b7cb99'; c.beginPath(); c.ellipse(80, 161, 65, 13, 0, 0, Math.PI*2); c.fill(); }
-    c.fillStyle = '#647e70'; c.fillRect(22, 80, 116, 79);
-    c.fillStyle = '#91a18b'; c.fillRect(28, 86, 104, 67);
-    c.strokeStyle = '#52695e'; c.lineWidth = 3; c.strokeRect(30, 88, 48, 62); c.strokeRect(82, 88, 48, 62);
-    c.fillStyle = '#d9c9a4'; c.fillRect(65, 114, 6, 5); c.fillRect(89, 114, 6, 5);
-    c.fillStyle = '#f5eedc'; c.fillRect(13, 60, 134, 26);
-    c.fillStyle = '#b7ceca'; c.fillRect(34, 62, 91, 15);
-    c.strokeStyle = '#6c8586'; c.lineWidth = 8; c.beginPath(); c.moveTo(80,63); c.lineTo(80,33); c.lineTo(103,33); c.lineTo(103,45); c.stroke();
-    if (!repaired) { c.fillStyle = '#72b8d8'; c.fillRect(98, 44, 6, 28); c.fillRect(104, 150, 5, 13); }
-  } else if (kind === 'sofa') {
-    c.fillStyle = '#625c40'; c.fillRect(26, 139, 10, 29); c.fillRect(124, 139, 10, 29);
-    c.fillStyle = '#a86e4d'; c.fillRect(16, 56, 128, 83);
-    c.fillStyle = '#bc875c'; c.fillRect(22, 63, 55, 55); c.fillRect(82, 63, 55, 55);
-    c.fillStyle = '#cb9668'; c.fillRect(17, 119, 126, 26);
-    c.fillStyle = '#955e40'; c.fillRect(6, 90, 21, 61); c.fillRect(133, 90, 21, 61);
-    c.fillStyle = '#d9c69c'; c.fillRect(38, 82, 28, 30);
-  } else if (kind === 'plant') {
-    c.fillStyle = '#ad7253'; c.beginPath(); c.moveTo(51,125); c.lineTo(109,125); c.lineTo(99,170); c.lineTo(61,170); c.closePath(); c.fill();
-    c.strokeStyle = '#4b7050'; c.lineWidth = 6; c.beginPath(); c.moveTo(80,130); c.lineTo(80,40); c.stroke();
-    for (let i = 0; i < 7; i++) { c.fillStyle = i%2 ? '#72945e' : '#4b7956'; c.beginPath(); c.ellipse(80+(i%2?20:-20), 35+i*12, 30, 12, i%2?-.5:.5, 0, Math.PI*2); c.fill(); }
-  } else if (kind === 'window') {
-    c.fillStyle = '#425c50'; c.fillRect(8, 8, 144, 158);
-    c.fillStyle = '#d3e6db'; c.fillRect(16, 16, 128, 142);
-    c.fillStyle = '#9ac8cf'; c.fillRect(24, 24, 112, 125);
-    c.fillStyle = '#b7ce9b'; c.fillRect(24, 110, 112, 39);
-    c.fillStyle = '#f5ecd7'; c.fillRect(76, 18, 8, 137); c.fillRect(20, 80, 120, 8);
-    c.fillStyle = '#f4eedc'; c.fillRect(2, 157, 156, 12);
   }
-  sprites.set(key, tile); return tile;
+  return new Float32Array(data);
 }
 
-function cameraPoint(player, x, y) {
-  const dx = x - player.x, dy = y - player.y;
-  return { side: -Math.sin(player.angle)*dx + Math.cos(player.angle)*dy, depth: Math.cos(player.angle)*dx + Math.sin(player.angle)*dy };
+function createTexture(gl,material) {
+  const tile=document.createElement('canvas');tile.width=tile.height=128;
+  const c=tile.getContext('2d');c.fillStyle='#ffffff';c.fillRect(0,0,128,128);
+  // Deterministic grain avoids random changes across launches and has no asset downloads.
+  let seed=29;
+  const random=()=>{seed=(seed*1664525+1013904223)>>>0;return seed/4294967296;};
+  if(material==='wood') {
+    c.fillStyle='#e3c49b';c.fillRect(0,0,128,128);
+    for(let i=0;i<250;i++) {c.strokeStyle=`rgba(93,61,34,${.04+random()*.16})`;c.lineWidth=.5+random();const y=random()*128;c.beginPath();c.moveTo(0,y);c.bezierCurveTo(35,y+random()*7,85,y-random()*7,128,y);c.stroke();}
+    c.fillStyle='#745638';c.fillRect(0,0,128,1);c.fillRect(0,0,1,128);
+  } else if(material==='tile') {
+    c.fillStyle='#ece8de';c.fillRect(0,0,128,128);c.strokeStyle='#b5b6a6';c.lineWidth=2;c.strokeRect(0,0,128,128);
+    for(let i=0;i<200;i++){c.fillStyle=`rgba(116,108,93,${random()*.08})`;c.fillRect(random()*128,random()*128,2,2);}
+  } else if(material==='fabric') {
+    c.fillStyle='#f2ede1';c.fillRect(0,0,128,128);
+    c.strokeStyle='#8d8c7e33';c.lineWidth=.6;
+    for(let i=0;i<128;i+=3){c.beginPath();c.moveTo(i,0);c.lineTo(i,128);c.moveTo(0,i);c.lineTo(128,i);c.stroke();}
+  } else if(material==='plaster'||material==='stone') {
+    for(let i=0;i<3500;i++){const shade=Math.floor((material==='stone'?230:246)+random()*(material==='stone'?25:9));c.fillStyle=`rgb(${shade},${shade},${shade})`;c.fillRect(random()*128,random()*128,material==='stone'?2:1,1);}
+  }
+  const texture=gl.createTexture();gl.bindTexture(gl.TEXTURE_2D,texture);
+  gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,tile);
+  gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.REPEAT);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.REPEAT);
+  gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR_MIPMAP_LINEAR);gl.generateMipmap(gl.TEXTURE_2D);
+  return texture;
 }
-function floorPolygon(c, player, horizon, points, color) {
-  let vertices = points.map(([x,y]) => cameraPoint(player,x,y));
-  // Clip polygons crossing the near plane instead of projecting behind the eye.
-  const clipped = [];
-  for (let i=0; i<vertices.length; i++) {
-    const a = vertices[i], b = vertices[(i+1)%vertices.length];
-    if (a.depth >= 0.08) clipped.push(a);
-    if ((a.depth >= 0.08) !== (b.depth >= 0.08)) {
-      const t = (0.08-a.depth)/(b.depth-a.depth);
-      clipped.push({ side: a.side+(b.side-a.side)*t, depth: 0.08 });
-    }
-  }
-  if (clipped.length<3) return;
-  c.fillStyle = color; c.beginPath();
-  clipped.forEach((p,i) => { const x = WIDTH/2+p.side*FOCAL/p.depth, y = horizon+0.5*FOCAL/p.depth; if(i) c.lineTo(x,y); else c.moveTo(x,y); });
-  c.closePath(); c.fill();
-}
 
-export function drawHouse(context, state, time = 0, mouseLocked = false) {
-  const c = view, p = state.player;
-  const horizon = HEIGHT/2 + p.pitch * 150;
-  const ceiling = c.createLinearGradient(0,0,0,horizon); ceiling.addColorStop(0,'#c1bca9'); ceiling.addColorStop(1,'#eee4cb');
-  c.fillStyle = ceiling; c.fillRect(0,0,WIDTH,HEIGHT);
-  c.fillStyle = '#aa8255'; c.fillRect(0,horizon,WIDTH,HEIGHT-horizon);
-  // World-space floorboards and rugs give motion a visible perspective cue.
-  for (let y=1; y<11; y+=0.5) for (let x=1; x<13; x++) {
-    if (Math.floor(x+y*2)%2) floorPolygon(c,p,horizon,[[x,y],[x+1,y],[x+1,y+0.49],[x,y+0.49]],'#b99161');
+export function createRenderer(canvas) {
+  const gl=canvas.getContext('webgl',{antialias:true,alpha:false});
+  if(!gl) throw new Error('This game needs WebGL. Try a recent desktop browser with hardware acceleration enabled.');
+  const vertexSource=`
+    attribute vec3 aPosition; attribute vec3 aNormal; attribute vec2 aUV;
+    uniform mat4 uModel; uniform mat4 uViewProjection;
+    varying vec3 vPosition; varying vec3 vNormal; varying vec2 vUV;
+    void main(){vec4 world=uModel*vec4(aPosition,1.0);vPosition=world.xyz;vNormal=normalize(mat3(uModel)*aNormal);vUV=aUV;gl_Position=uViewProjection*world;}`;
+  const fragmentSource=`
+    precision mediump float;
+    varying vec3 vPosition; varying vec3 vNormal; varying vec2 vUV;
+    uniform sampler2D uTexture; uniform vec3 uColor; uniform vec2 uRepeat;
+    uniform vec3 uEye; uniform float uGlow; uniform float uShine; uniform float uLamp;
+    void main(){
+      vec3 normal=normalize(vNormal);vec3 tex=texture2D(uTexture,vUV*uRepeat).rgb;
+      vec3 light=vec3(.46,.44,.38);
+      vec3 sun=normalize(vec3(.4,.65,.2));light+=vec3(.43,.43,.37)*max(0.0,dot(normal,sun));
+      vec3 lamp=vec3(3.6,2.35,8.5)-vPosition;
+      light+=vec3(.62,.44,.22)*max(0.0,dot(normal,normalize(lamp)))/(1.0+dot(lamp,lamp)*.15);
+      lamp=vec3(10.5,2.35,3.0)-vPosition;
+      light+=vec3(.46,.43,.29)*max(0.0,dot(normal,normalize(lamp)))/(1.0+dot(lamp,lamp)*.12);
+      lamp=vec3(11.8,1.65,9.3)-vPosition;
+      light+=uLamp*vec3(.9,.59,.22)*max(0.0,dot(normal,normalize(lamp)))/(1.0+dot(lamp,lamp)*1.2);
+      vec3 color=uColor*tex*light;
+      vec3 reflected=reflect(-sun,normal);float spec=pow(max(0.0,dot(normalize(uEye-vPosition),reflected)),32.0);
+      color+=uShine*spec*vec3(.3,.3,.26);color=mix(color,uColor*1.35,uGlow);
+      float fog=1.0-exp(-length(uEye-vPosition)*.012);
+      color=mix(color,vec3(.71,.69,.61),fog);
+      gl_FragColor=vec4(color,1.0);
+    }`;
+  function shader(type,source){const s=gl.createShader(type);gl.shaderSource(s,source);gl.compileShader(s);if(!gl.getShaderParameter(s,gl.COMPILE_STATUS))throw new Error(gl.getShaderInfoLog(s));return s;}
+  const program=gl.createProgram();gl.attachShader(program,shader(gl.VERTEX_SHADER,vertexSource));gl.attachShader(program,shader(gl.FRAGMENT_SHADER,fragmentSource));gl.linkProgram(program);
+  if(!gl.getProgramParameter(program,gl.LINK_STATUS))throw new Error(gl.getProgramInfoLog(program));
+  gl.useProgram(program);gl.enable(gl.DEPTH_TEST);
+  const names=['uModel','uViewProjection','uTexture','uColor','uRepeat','uEye','uGlow','uShine','uLamp'];
+  const uniforms=Object.fromEntries(names.map(name=>[name,gl.getUniformLocation(program,name)]));
+  const attributes=['aPosition','aNormal','aUV'].map(name=>gl.getAttribLocation(program,name));
+  const meshes={};
+  for(const kind of ['box','cylinder']){const data=geometry(kind),buffer=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,buffer);gl.bufferData(gl.ARRAY_BUFFER,data,gl.STATIC_DRAW);meshes[kind]={buffer,count:data.length/8};}
+  const textures=Object.fromEntries(['plain','wood','tile','fabric','plaster','stone','metal','glass','glow'].map(name=>[name,createTexture(gl,name)]));
+  const staticItems=[];
+  const add=(kind,item)=>staticItems.push({kind,...item});
+  const box=(x,y,z,w,h,d,color,material='plain',repeat=[1,1])=>add('box',{x,y,z,w,h,d,color,material,repeat});
+  // Room-specific surfaces, physical baseboards, and crown molding.
+  for(const room of [{x:4,z:8,w:6,d:6,color:'#c7ac87',floor:'wood'},{x:4,z:3,w:6,d:4,color:'#b49b77',floor:'wood'},{x:10.5,z:3,w:5,d:4,color:'#d8d4c6',floor:'tile'},{x:10.5,z:8,w:5,d:6,color:'#c0a27b',floor:'wood'}]) {
+    box(room.x,-.05,room.z,room.w,.1,room.d,room.color,room.floor,[room.w,room.d*2]);
+    box(room.x,2.85,room.z,room.w,.1,room.d,'#e8e4d8','plaster');
   }
-  floorPolygon(c,p,horizon,[[1.5,8],[3,8],[3,10],[1.5,10]],'#6d8779');
-  floorPolygon(c,p,horizon,[[1.65,8.15],[2.85,8.15],[2.85,9.85],[1.65,9.85]],'#a3ae8a');
-  const board = state.repairs.find(r=>r.id==='floorboard');
-  floorPolygon(c,p,horizon,[[4,7],[5,7],[5,7.65],[4,7.65]],board.repaired?'#c4a06b':'#5c3e2b');
-  floorPolygon(c,p,horizon,[[4.04,7.05],[4.96,7.02],[4.9,7.57],[4.09,7.6]],board.repaired?'#b68d59':'#97603d');
-  if (board.repaired) for(const x of [4.13,4.8]) for(const y of [7.12,7.48]) floorPolygon(c,p,horizon,[[x,y],[x+.04,y],[x+.04,y+.04],[x,y+.04]],'#4a5149');
+  WORLD.forEach((row,z)=>[...row].forEach((cell,x)=>{
+    if(cell!=='1')return;
+    const color=x>=7?(z<6?'#dce1d1':'#d2dbce'):(z<6?'#e4dfd1':'#e3dccc');
+    box(x+.5,WALL_HEIGHT/2,z+.5,1,WALL_HEIGHT,1,color,'plaster');
+    box(x+.5,.08,z+.5,1.035,.16,1.035,'#f0e9d7');
+    box(x+.5,2.71,z+.5,1.045,.13,1.045,'#eee7d7');
+  }));
+  // Door openings receive a header and wood trim instead of reading as missing walls.
+  for(const [x,z,alongX] of [[3.5,5.5,false],[10.5,5.5,false],[7.5,4.5,true],[7.5,7.5,true],[7.5,8.5,true]]) {
+    box(x,2.55,z,1,.5,1,'#e3dfcf','plaster');
+    if(alongX){for(const dz of [-.46,.46])box(x,1.18,z+dz,1.025,2.36,.08,'#c7b394','wood');}
+    else {for(const dx of [-.46,.46])box(x+dx,1.18,z,.08,2.36,1.025,'#c7b394','wood');}
+    box(x,2.3,z,alongX?1.025:1.05,.09,alongX?1.05:1.025,'#c7b394','wood');
+  }
+  // Flat rugs and contact shadows anchor furniture to the floor.
+  box(2.7,.006,9,3,.012,3.2,'#7d8d81','fabric',[2,2]);
+  box(2.7,.014,9,2.7,.009,2.9,'#9ba591','fabric',[3,3]);
+  for(const [x,z,w,d] of [[1.6,9.1,1,2.55],[3,9.05,.9,1.5],[10.35,7.65,1.7,2.2]])box(x,.021,z,w,.005,d,'#8b8065');
+  buildScene(add);
+  let repairKey='',repairItems=[];
+  const mapCanvas=document.querySelector('#floor-plan'),mapContext=mapCanvas.getContext('2d');
+  const roomLabel=document.querySelector('#room-name');
+  const reticle=document.querySelector('#crosshair');
 
-  for (let column=0; column<WIDTH; column++) {
-    const screen = (column-WIDTH/2)/FOCAL;
-    const rayX = Math.cos(p.angle)-Math.sin(p.angle)*screen;
-    const rayY = Math.sin(p.angle)+Math.cos(p.angle)*screen;
-    let mapX=Math.floor(p.x), mapY=Math.floor(p.y);
-    const deltaX=Math.abs(1/rayX), deltaY=Math.abs(1/rayY);
-    const stepX=rayX<0?-1:1, stepY=rayY<0?-1:1;
-    let sideX=(rayX<0?p.x-mapX:mapX+1-p.x)*deltaX;
-    let sideY=(rayY<0?p.y-mapY:mapY+1-p.y)*deltaY;
-    let side=0;
-    for(let step=0;step<60;step++) {
-      if(sideX<sideY) { sideX+=deltaX; mapX+=stepX; side=0; }
-      else { sideY+=deltaY; mapY+=stepY; side=1; }
-      if(WORLD[mapY]?.[mapX]!=='0') break;
-    }
-    const depth=Math.max(.02,side===0?sideX-deltaX:sideY-deltaY); wallDepth[column]=depth;
-    const height=FOCAL/depth;
-    const top=horizon-height/2;
-    const hit=side===0?p.y+depth*rayY:p.x+depth*rayX;
-    const texX=Math.min(63,Math.floor((hit-Math.floor(hit))*64));
-    c.drawImage(texture(mapX>7?'kitchen':'living'),texX,0,1,64,column,top,1,height);
-    c.fillStyle=`rgba(24,35,29,${Math.min(.68,depth*.045+(side===0?.1:0))})`; c.fillRect(column,top,1,height);
-    c.fillStyle='#504c3b'; c.fillRect(column,top,1,Math.max(1,height*.018));
+  function draw(item) {
+    const mesh=meshes[item.kind];gl.bindBuffer(gl.ARRAY_BUFFER,mesh.buffer);
+    for(let i=0;i<3;i++){gl.enableVertexAttribArray(attributes[i]);gl.vertexAttribPointer(attributes[i],i===2?2:3,gl.FLOAT,false,32,i===0?0:i===1?12:24);}
+    gl.uniformMatrix4fv(uniforms.uModel,false,model(item));
+    gl.uniform3fv(uniforms.uColor,hex(item.color));gl.uniform2fv(uniforms.uRepeat,item.repeat||[1,1]);
+    gl.uniform1f(uniforms.uGlow,item.material==='glow'?1:0);gl.uniform1f(uniforms.uShine,['metal','glass','stone'].includes(item.material)?.65:0);
+    gl.bindTexture(gl.TEXTURE_2D,textures[item.material||'plain']);gl.drawArrays(gl.TRIANGLES,0,mesh.count);
   }
-
-  const items = [
-    ...state.repairs.filter(r=>r.id!=='floorboard').map(r=>({...r,kind:r.id,width:r.id==='drywall'?.75:1.15,height:r.id==='drywall'?.6:.75,base:r.id==='drywall'?.3:0})),
-    {kind:'sofa',x:1.65,y:9.6,width:1.5,height:.75,base:0},
-    {kind:'plant',x:5.9,y:2,width:.7,height:.85,base:0},
-    {kind:'plant',x:12.25,y:9.7,width:.8,height:.85,base:0},
-    {kind:'window',x:4.7,y:1.06,width:.85,height:.6,base:.3},
-    {kind:'window',x:10,y:1.06,width:.85,height:.6,base:.3},
-  ].map(item=>({...item,...cameraPoint(p,item.x,item.y)})).sort((a,b)=>b.depth-a.depth);
-  for(const item of items) {
-    if(item.depth<.15) continue;
-    const scale=FOCAL/item.depth, width=item.width*scale, height=item.height*scale;
-    const left=WIDTH/2+item.side*scale-width/2;
-    const top=horizon+(.5-item.base-item.height)*scale;
-    if(left>WIDTH || left+width<0) continue;
-    const sprite=makeSprite(item.kind,item.repaired);
-    for(let x=Math.max(0,Math.floor(left)); x<Math.min(WIDTH,left+width); x++) {
-      if(item.depth>wallDepth[x]+.03) continue;
-      const sx=Math.max(0,Math.min(159,Math.floor((x-left)/width*160)));
-      c.drawImage(sprite,sx,0,1,180,x,top,1,height);
-    }
-  }
-  const active=nearestRepair(state);
-  // Small floating job markers remain legible against the interior.
-  for(const repair of state.repairs) {
-    const point=cameraPoint(p,repair.x,repair.y);
-    if(point.depth<.3) continue;
-    const sx=WIDTH/2+point.side*FOCAL/point.depth;
-    if(sx<10 || sx>WIDTH-10 || point.depth>wallDepth[Math.floor(sx)]+.1) continue;
-    const sy=repair.id==='floorboard'?horizon+.16*FOCAL/point.depth:horizon-.43*FOCAL/point.depth;
-    c.fillStyle=repair.repaired?'#45694d':'#f3d58c'; c.beginPath(); c.arc(sx,sy,active?.id===repair.id?9:6,0,Math.PI*2); c.fill();
-    if(active?.id===repair.id) { c.fillStyle='#293c33'; c.font='bold 11px system-ui'; c.textAlign='center'; c.fillText('E',sx,sy+4); }
-  }
-  // An eye-level crosshair and held tool replace the old top-down player marker.
-  c.strokeStyle='#fff8e0'; c.lineWidth=1.5; c.beginPath(); c.moveTo(WIDTH/2-5,HEIGHT/2); c.lineTo(WIDTH/2+5,HEIGHT/2); c.moveTo(WIDTH/2,HEIGHT/2-5); c.lineTo(WIDTH/2,HEIGHT/2+5); c.stroke();
-  const bob=Math.sin(time*.008)*1.5;
-  c.save(); c.translate(WIDTH-88,HEIGHT+15+bob); c.rotate(-.35);
-  c.fillStyle='#c19263'; c.fillRect(-13,-92,26,110); c.fillStyle='#7f9b8b'; c.fillRect(-21,-30,42,60);
-  c.fillStyle='#815e3d'; c.fillRect(-5,-145,12,75); c.fillStyle='#536365'; c.fillRect(-35,-153,65,22); c.fillStyle='#a5b4ac'; c.fillRect(-35,-153,17,22); c.restore();
-  drawMap(c,state);
-  c.fillStyle='#243c32cc'; c.fillRect(12,12,174,26); c.fillStyle='#f9f2dc'; c.font='11px system-ui'; c.textAlign='left';
-  c.fillText(p.y<5?(p.x<7?'WORKROOM':'KITCHEN'):(p.x<7?'LIVING ROOM':'DINING ROOM'),23,29);
-  if(!mouseLocked) { c.fillStyle='#243c32c9'; c.fillRect(WIDTH/2-123,HEIGHT-31,246,22); c.fillStyle='#fff4da'; c.textAlign='center'; c.fillText('Click view for mouse look · ← → also turn',WIDTH/2,HEIGHT-16); }
-  context.imageSmoothingEnabled=false; context.drawImage(surface,0,0,context.canvas.width,context.canvas.height);
+  return function drawHouse(state,time,mouseLocked) {
+    const p=state.player;
+    gl.viewport(0,0,canvas.width,canvas.height);gl.clearColor(.7,.72,.67,1);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
+    gl.uniformMatrix4fv(uniforms.uViewProjection,false,multiply(perspective(canvas.width/canvas.height),camera(p)));
+    gl.uniform3f(uniforms.uEye,p.x,EYE_HEIGHT,p.y);gl.uniform1f(uniforms.uLamp,state.repairs.find(r=>r.id==='light').repaired?1:0);
+    gl.uniform1i(uniforms.uTexture,0);
+    for(const item of staticItems)draw(item);
+    const key=state.repairs.map(r=>Number(r.repaired)).join('');
+    if(key!==repairKey){repairKey=key;repairItems=[];for(const r of state.repairs)buildRepair((kind,item)=>repairItems.push({kind,...item}),r);}
+    for(const item of repairItems)draw(item);
+    const board=state.repairs.find(r=>r.id==='floorboard');
+    draw({kind:'box',x:4.5,y:.028,z:7.3,w:1,h:.018,d:.58,color:board.repaired?'#b69c76':'#48382a',material:'wood'});
+    draw({kind:'box',x:4.5,y:board.repaired?.045:.085,z:7.3,w:.94,h:.04,d:.49,color:board.repaired?'#c9ac82':'#8e6d4a',material:'wood',angle:board.repaired?0:.12});
+    if(board.repaired)for(const x of [4.12,4.88])for(const z of [7.12,7.48])draw({kind:'cylinder',x,y:.07,z,w:.025,h:.01,d:.025,color:'#6b7169',material:'metal'});
+    // A discreet held hammer in camera space remains visible as you look up/down.
+    gl.clear(gl.DEPTH_BUFFER_BIT);
+    gl.uniformMatrix4fv(uniforms.uViewProjection,false,perspective(canvas.width/canvas.height));
+    draw({kind:'cylinder',x:.26,y:-.27,z:-.54,w:.10,h:.10,d:.12,color:'#c79f79',material:'plain'});
+    draw({kind:'box',x:.26,y:-.36,z:-.54,w:.14,h:.13,d:.14,color:'#6b8475',material:'fabric'});
+    draw({kind:'box',x:.26,y:-.23,z:-.58,w:.035,h:.33,d:.04,color:'#b69160',material:'wood',angle:.15});
+    draw({kind:'box',x:.26,y:-.07,z:-.58,w:.19,h:.065,d:.065,color:'#89918b',material:'metal'});
+    const active=nearestRepair(state);reticle.classList.toggle('ready',Boolean(active));
+    roomLabel.textContent=p.y<5?(p.x<7?'WORKROOM':'KITCHEN'):(p.x<7?'LIVING ROOM':'DINING ROOM');
+    document.querySelector('#look-hint').hidden=mouseLocked;
+    drawMap(mapContext,state);
+  };
 }
 
 function drawMap(c,state) {
-  const unit=6, ox=WIDTH-100, oy=15;
-  c.fillStyle='#f5ecd9e8'; c.fillRect(ox-5,oy-5,94,82);
-  WORLD.forEach((row,y)=>[...row].forEach((cell,x)=>{if(cell==='1'){c.fillStyle='#556b5e';c.fillRect(ox+x*unit,oy+y*unit,unit,unit);}}));
-  for(const r of state.repairs){c.fillStyle=r.repaired?'#63976b':'#bc653d';c.fillRect(ox+r.x*unit-2,oy+r.y*unit-2,4,4);}
-  const p=state.player;c.fillStyle='#335d78';c.beginPath();c.arc(ox+p.x*unit,oy+p.y*unit,2.5,0,Math.PI*2);c.fill();
-  c.strokeStyle='#335d78';c.beginPath();c.moveTo(ox+p.x*unit,oy+p.y*unit);c.lineTo(ox+(p.x+Math.cos(p.angle))*unit,oy+(p.y+Math.sin(p.angle))*unit);c.stroke();
+  const unit=10,ox=5,oy=5;c.clearRect(0,0,150,130);
+  c.fillStyle='#f5efe2e8';c.fillRect(0,0,150,130);
+  WORLD.forEach((row,y)=>[...row].forEach((cell,x)=>{if(cell==='1'){c.fillStyle='#65766a';c.fillRect(ox+x*unit,oy+y*unit,unit,unit);}}));
+  for(const r of state.repairs){c.fillStyle=r.repaired?'#5a9c69':'#bf7044';c.beginPath();c.arc(ox+r.x*unit,oy+r.y*unit,3,0,Math.PI*2);c.fill();}
+  const p=state.player;c.fillStyle='#315e7a';c.beginPath();c.arc(ox+p.x*unit,oy+p.y*unit,3,0,Math.PI*2);c.fill();
+  c.strokeStyle='#315e7a';c.lineWidth=2;c.beginPath();c.moveTo(ox+p.x*unit,oy+p.y*unit);c.lineTo(ox+(p.x+Math.cos(p.angle))*unit,oy+(p.y+Math.sin(p.angle))*unit);c.stroke();
 }

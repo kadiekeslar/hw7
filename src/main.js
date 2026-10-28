@@ -1,10 +1,14 @@
-import { createState, movePlayer, nearestRepair, completedCount, completeRepair } from './state.js?v=2';
-import { drawHouse } from './render.js?v=2';
-import { REPAIR_TASKS } from './repairs.js?v=2';
+import { createState, movePlayer, nearestRepair, completedCount, completeRepair } from './state.js?v=3';
+import { createRenderer } from './render.js?v=3';
+import { REPAIR_TASKS } from './repairs.js?v=3';
 
 let state = createState();
 const canvas = document.querySelector('#house');
-const context = canvas.getContext('2d');
+let drawHouse;
+try { drawHouse = createRenderer(canvas); } catch (error) {
+  document.querySelector('#interaction').textContent = error.message;
+  throw error;
+}
 const counter = document.querySelector('#counter');
 const interaction = document.querySelector('#interaction');
 const checklist = document.querySelector('#checklist');
@@ -86,7 +90,7 @@ function frame(time) {
     const forward = Number(keys.has('w') || keys.has('arrowup')) - Number(keys.has('s') || keys.has('arrowdown'));
     movePlayer(state, strafe, forward, seconds);
   }
-  drawHouse(context, state, time, document.pointerLockElement === canvas);
+  drawHouse(state, time, document.pointerLockElement === canvas);
   const repair = nearestRepair(state);
   interaction.textContent = repair ? `Press E to repair: ${repair.name}` : 'Explore the house. Face a damaged object and move close to repair it.';
   requestAnimationFrame(frame);

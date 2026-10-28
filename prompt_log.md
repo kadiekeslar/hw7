@@ -48,3 +48,12 @@ Provided the local server link.
 > how would i get the link from my repo
 
 Explained GitHub Pages configuration. The author enabled Pages on main/root; the first deployment succeeded. The public link is recorded in README.md.
+
+
+## House detail and additional repairs prompt (verbatim)
+
+> make the house look more realistic and like a real house, and add some repairs that need to be done
+
+### Result (assistant summary)
+
+Replaced the raycast sprites with a dependency-free WebGL scene using solid 3D geometry, procedural wood/tile/fabric/plaster materials, room furnishings, appliances, windows, trim, and warm lighting. Kept the state/movement, original repairs, task registry and win flow. Added three interactive repairs: removing/replacing four window panes, leveling a cabinet and tightening its screws, and replacing a lamp bulb through ordered steps. Completion now requires all six repairs. Kept SPEC.md unchanged and documented expanded scope and remaining limits in README.md. Automated checks cover reachability and the six-task registry; a browser playthrough completed all six repairs and reached the win screen.

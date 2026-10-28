@@ -23,8 +23,11 @@ export function createState() {
     player: { x: 3.5, y: 9.5, angle: -Math.PI / 2, pitch: 0 },
     repairs: [
       { id: 'drywall', name: 'Damaged drywall', x: 2.5, y: 1.18, repaired: false },
-      { id: 'pipe', name: 'Leaking pipe', x: 11.5, y: 1.7, repaired: false },
+      { id: 'pipe', name: 'Leaking pipe', x: 11.75, y: 1.8, repaired: false },
       { id: 'floorboard', name: 'Loose floorboard', x: 4.5, y: 7.3, repaired: false },
+      { id: 'window', name: 'Broken window', x: 1.06, y: 7.5, repaired: false },
+      { id: 'cabinet', name: 'Crooked cabinet door', x: 9.45, y: 1.3, repaired: false },
+      { id: 'light', name: 'Burned-out lamp', x: 11.8, y: 9.3, repaired: false },
     ],
   };
 }

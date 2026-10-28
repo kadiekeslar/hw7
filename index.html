@@ -4,18 +4,24 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Fixer Upper</title>
-  <link rel="stylesheet" href="style.css?v=2">
-  <script type="module" src="src/main.js?v=2"></script>
+  <link rel="stylesheet" href="style.css?v=3">
+  <script type="module" src="src/main.js?v=3"></script>
 </head>
 <body>
   <main>
-    <header><div><p class="eyebrow">A LITTLE HOUSE. A LITTLE WORK.</p><h1>Fixer Upper<span> ✦</span></h1></div><p id="counter" role="status">Repairs: 0 / 3</p></header>
+    <header><div><p class="eyebrow">A LITTLE HOUSE. A LITTLE WORK.</p><h1>Fixer Upper<span> ✦</span></h1></div><p id="counter" role="status">Repairs: 0 / 6</p></header>
     <section class="game-shell" aria-label="House repair game">
+      <div class="viewport">
       <canvas id="house" width="900" height="540" aria-label="First-person house. WASD to walk, left and right arrows to turn, E to repair. Click the view for mouse look." tabindex="0"></canvas>
+      <div id="room-name" class="room-label"></div>
+      <canvas id="floor-plan" width="150" height="130" aria-label="Floor plan: orange marks are unfinished repairs, green marks are complete, blue marks your position."></canvas>
+      <span id="crosshair" aria-hidden="true">+</span>
+      <p id="look-hint">Click to look around · WASD to walk</p>
+      </div>
       <p id="interaction" aria-live="polite">Explore the house. Face a damaged object and move close to repair it.</p>
     </section>
-    <footer><p><kbd>W A S D</kbd> Walk &nbsp; <kbd>← →</kbd> Turn &nbsp; Click view: mouse look &nbsp; <kbd>E</kbd> Repair &nbsp; <kbd>Esc</kbd> Release mouse / close task</p><p>THREE JOBS. ONE HAPPY HOME.</p></footer>
-    <aside><strong>The punch list</strong><ul id="checklist"></ul><p class="note">Patch the workroom wall, fix the kitchen sink, and secure the living-room floor. The floor plan marks unfinished repairs in orange.</p></aside>
+    <footer><p><kbd>W A S D</kbd> Walk &nbsp; <kbd>← →</kbd> Turn &nbsp; Click view: mouse look &nbsp; <kbd>E</kbd> Repair &nbsp; <kbd>Esc</kbd> Release mouse / close task</p><p>SIX JOBS. ONE HAPPY HOME.</p></footer>
+    <aside><strong>The punch list</strong><ul id="checklist"></ul><p class="note">Six little jobs to make this house a home. Explore the living room, workroom, kitchen, and dining room. Orange dots on the floor plan mark repairs.</p></aside>
   </main>
   <dialog id="repair-dialog" aria-labelledby="repair-title">
     <div class="dialog-heading"><div><p class="eyebrow">ROLL UP YOUR SLEEVES</p><h2 id="repair-title"></h2></div><button id="close-repair" aria-label="Close repair">✕</button></div>
