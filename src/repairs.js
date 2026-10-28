@@ -1,3 +1,5 @@
+import { INITIAL_ROTATIONS, pipePorts, pipesConnected } from './pipes.js';
+
 // Each task calls onComplete only on success and returns cleanup for its listeners.
 // Closing a task discards its unfinished progress; completed repairs live in state.js.
 export function startDrywall(container, onComplete) {
@@ -41,14 +43,40 @@ export function startFloorboard(container, onComplete) {
   return () => board.remove();
 }
 
+export function startPipe(container, onComplete) {
+  const rotations = [...INITIAL_ROTATIONS];
+  const panel = document.createElement('div'); panel.className = 'pipe-panel';
+  const inlet = document.createElement('p'); inlet.className = 'pipe-end'; inlet.textContent = 'WATER IN →';
+  const grid = document.createElement('div'); grid.className = 'pipe-grid';
+  const outlet = document.createElement('p'); outlet.className = 'pipe-end'; outlet.textContent = '← WATER OUT';
+  const directions = ['north', 'east', 'south', 'west'];
+  for (let index = 0; index < 4; index++) {
+    const button = document.createElement('button'); button.className = 'pipe-tile';
+    const paint = () => {
+      const ports = pipePorts(index, rotations[index]);
+      button.setAttribute('aria-label', `Rotate pipe ${index + 1}, connects ${ports.map(port => directions[port]).join(' and ')}`);
+      button.replaceChildren();
+      for (const port of ports) {
+        const arm = document.createElement('span'); arm.className = `pipe-arm port-${port}`; button.append(arm);
+      }
+      const joint = document.createElement('span'); joint.className = 'pipe-joint'; button.append(joint);
+    };
+    button.addEventListener('click', () => {
+      rotations[index] = (rotations[index] + 1) % 4; paint();
+      if (pipesConnected(rotations)) onComplete();
+    });
+    paint(); grid.append(button);
+  }
+  panel.append(inlet, grid, outlet); container.append(panel);
+  return () => panel.remove();
+}
+
 export const REPAIR_TASKS = {
   drywall: { title: 'Patch the drywall', instructions: 'Click each dark square, or hold the mouse button and sweep across the hole to cover all 40 areas.', start: startDrywall },
   floorboard: { title: 'Secure the floorboard', instructions: 'Click the four marked nail locations to hammer the loose board into place.', start: startFloorboard },
   pipe: {
-    title: 'A plumbing job for later',
-    instructions: 'This repair is not built yet. The next developer will add the rotating pipe puzzle here. Close this panel and try the drywall or floorboard.',
-    // TODO Phase 2: add a pipe grid with rotation and continuous source-to-outlet validation.
-    // Call onComplete only when the connection succeeds. Never complete on panel close.
-    start: () => () => {},
+    title: 'Stop the leak',
+    instructions: 'Click a pipe to rotate it clockwise. Connect WATER IN at the top left to WATER OUT at the bottom left, using all four pieces. The route goes across the top, down, then back across the bottom.',
+    start: startPipe,
   },
 };

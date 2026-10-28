@@ -11,11 +11,11 @@
   <main>
     <header><div><p class="eyebrow">A LITTLE HOUSE. A LITTLE WORK.</p><h1>Fixer Upper<span> ✦</span></h1></div><p id="counter" role="status">Repairs: 0 / 3</p></header>
     <section class="game-shell" aria-label="House repair game">
-      <canvas id="house" width="900" height="540" aria-label="House with a drywall hole, leaking sink, and loose floorboard. Use WASD or arrow keys to move, and E to interact." tabindex="0"></canvas>
-      <p id="interaction" aria-live="polite">Walk up to a damaged object to get started.</p>
+      <canvas id="house" width="900" height="540" aria-label="First-person house. WASD to walk, left and right arrows to turn, E to repair. Click the view for mouse look." tabindex="0"></canvas>
+      <p id="interaction" aria-live="polite">Explore the house. Face a damaged object and move close to repair it.</p>
     </section>
-    <footer><p><kbd>W A S D</kbd> / <kbd>↑ ← ↓ →</kbd> Move &nbsp; <kbd>E</kbd> Repair &nbsp; <kbd>Esc</kbd> Close task</p><p>PHASE 1 · WORK IN PROGRESS</p></footer>
-    <aside><strong>The punch list</strong><ul id="checklist"></ul><p class="note">Two repairs are playable. The pipe puzzle is the next job for the developer taking over.</p></aside>
+    <footer><p><kbd>W A S D</kbd> Walk &nbsp; <kbd>← →</kbd> Turn &nbsp; Click view: mouse look &nbsp; <kbd>E</kbd> Repair &nbsp; <kbd>Esc</kbd> Release mouse / close task</p><p>THREE JOBS. ONE HAPPY HOME.</p></footer>
+    <aside><strong>The punch list</strong><ul id="checklist"></ul><p class="note">Patch the workroom wall, fix the kitchen sink, and secure the living-room floor. The floor plan marks unfinished repairs in orange.</p></aside>
   </main>
   <dialog id="repair-dialog" aria-labelledby="repair-title">
     <div class="dialog-heading"><div><p class="eyebrow">ROLL UP YOUR SLEEVES</p><h2 id="repair-title"></h2></div><button id="close-repair" aria-label="Close repair">✕</button></div>

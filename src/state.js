@@ -1,33 +1,81 @@
-// World coordinates stay fixed when the canvas is resized by CSS.
-export const HOUSE = { x: 50, y: 65, width: 800, height: 425 };
-export const PLAYER_RADIUS = 14;
-export const PLAYER_SPEED = 190;
-export const INTERACTION_DISTANCE = 85;
+// Tile units are shared by movement, raycasting, and the small floor-plan HUD.
+export const WORLD = [
+  '11111111111111',
+  '10000001000001',
+  '10000001000001',
+  '10000001000001',
+  '10000000000001',
+  '11101111110111',
+  '10000001000001',
+  '10000000000001',
+  '10000000000001',
+  '10000001000001',
+  '10000001000001',
+  '11111111111111',
+];
+export const PLAYER_RADIUS = 0.2;
+export const PLAYER_SPEED = 2.5;
+export const INTERACTION_DISTANCE = 1.65;
+export const FIELD_OF_VIEW = Math.PI / 2.8;
 
 export function createState() {
   return {
-    player: { x: 450, y: 400 },
+    player: { x: 3.5, y: 9.5, angle: -Math.PI / 2, pitch: 0 },
     repairs: [
-      { id: 'drywall', name: 'Damaged drywall', x: 195, y: 140, repaired: false },
-      { id: 'pipe', name: 'Leaking pipe', x: 710, y: 160, repaired: false },
-      { id: 'floorboard', name: 'Loose floorboard', x: 365, y: 330, repaired: false },
+      { id: 'drywall', name: 'Damaged drywall', x: 2.5, y: 1.18, repaired: false },
+      { id: 'pipe', name: 'Leaking pipe', x: 11.5, y: 1.7, repaired: false },
+      { id: 'floorboard', name: 'Loose floorboard', x: 4.5, y: 7.3, repaired: false },
     ],
   };
 }
 
-export function movePlayer(state, horizontal, vertical, seconds) {
-  const length = Math.hypot(horizontal, vertical);
+export function isWall(x, y) {
+  return WORLD[Math.floor(y)]?.[Math.floor(x)] !== '0';
+}
+
+export function canStand(x, y) {
+  // Circle versus nearby wall rectangles, including corners and outside the map.
+  for (let row = Math.floor(y - PLAYER_RADIUS); row <= Math.floor(y + PLAYER_RADIUS); row++) {
+    for (let column = Math.floor(x - PLAYER_RADIUS); column <= Math.floor(x + PLAYER_RADIUS); column++) {
+      if (!isWall(column, row)) continue;
+      const dx = x - Math.max(column, Math.min(x, column + 1));
+      const dy = y - Math.max(row, Math.min(y, row + 1));
+      if (dx * dx + dy * dy < PLAYER_RADIUS * PLAYER_RADIUS) return false;
+    }
+  }
+  return true;
+}
+
+export function movePlayer(state, strafe, forward, seconds) {
+  const length = Math.hypot(strafe, forward);
   if (!length) return;
-  const distance = PLAYER_SPEED * seconds / length;
-  // Clamp the player's entire circle inside the four outside walls.
-  state.player.x = Math.max(HOUSE.x + PLAYER_RADIUS, Math.min(HOUSE.x + HOUSE.width - PLAYER_RADIUS, state.player.x + horizontal * distance));
-  state.player.y = Math.max(HOUSE.y + PLAYER_RADIUS, Math.min(HOUSE.y + HOUSE.height - PLAYER_RADIUS, state.player.y + vertical * distance));
+  const { angle } = state.player;
+  const distance = PLAYER_SPEED * Math.min(seconds, 0.1) / length;
+  const dx = (Math.cos(angle) * forward - Math.sin(angle) * strafe) * distance;
+  const dy = (Math.sin(angle) * forward + Math.cos(angle) * strafe) * distance;
+  // Axis-separated movement slides along walls; short steps cannot tunnel through them.
+  if (canStand(state.player.x + dx, state.player.y)) state.player.x += dx;
+  if (canStand(state.player.x, state.player.y + dy)) state.player.y += dy;
+}
+
+export function hasLineOfSight(from, to) {
+  const length = Math.hypot(to.x - from.x, to.y - from.y);
+  const steps = Math.ceil(length / 0.05);
+  for (let step = 1; step <= steps; step++) {
+    const fraction = step / steps;
+    if (isWall(from.x + (to.x - from.x) * fraction, from.y + (to.y - from.y) * fraction)) return false;
+  }
+  return true;
 }
 
 export function nearestRepair(state) {
   return state.repairs.filter(repair => !repair.repaired)
-    .map(repair => ({ repair, distance: Math.hypot(repair.x - state.player.x, repair.y - state.player.y) }))
-    .filter(candidate => candidate.distance <= INTERACTION_DISTANCE)
+    .map(repair => {
+      const dx = repair.x - state.player.x, dy = repair.y - state.player.y;
+      const direction = Math.atan2(dy, dx) - state.player.angle;
+      return { repair, distance: Math.hypot(dx, dy), facing: Math.cos(direction) };
+    })
+    .filter(({ repair, distance, facing }) => distance <= INTERACTION_DISTANCE && (distance < 0.45 || facing > 0.55) && hasLineOfSight(state.player, repair))
     .sort((a, b) => a.distance - b.distance)[0]?.repair;
 }
 

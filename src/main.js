@@ -18,7 +18,7 @@ function updateProgress() {
   counter.textContent = `Repairs: ${completedCount(state)} / ${state.repairs.length}`;
   checklist.replaceChildren(...state.repairs.map(repair => {
     const item = document.createElement('li');
-    item.textContent = `${repair.repaired ? '✓' : '○'} ${repair.name}${repair.id === 'pipe' && !repair.repaired ? ' · coming next' : ''}`;
+    item.textContent = `${repair.repaired ? '✓' : '○'} ${repair.name}`;
     return item;
   }));
 }
@@ -31,6 +31,7 @@ function closeRepair() {
 
 function openRepair(repair) {
   keys.clear();
+  if (document.pointerLockElement) document.exitPointerLock();
   const task = REPAIR_TASKS[repair.id];
   document.querySelector('#repair-title').textContent = task.title;
   document.querySelector('#repair-instructions').textContent = task.instructions;
@@ -45,6 +46,7 @@ function openRepair(repair) {
 
 document.querySelector('#close-repair').addEventListener('click', closeRepair);
 dialog.addEventListener('cancel', event => { event.preventDefault(); closeRepair(); });
+winDialog.addEventListener('cancel', event => event.preventDefault());
 document.querySelector('#restart').addEventListener('click', () => {
   state = createState(); keys.clear(); updateProgress(); winDialog.close(); canvas.focus();
 });
@@ -62,19 +64,31 @@ window.addEventListener('keyup', event => keys.delete(event.key.toLowerCase()));
 window.addEventListener('blur', () => keys.clear());
 document.addEventListener('visibilitychange', () => keys.clear());
 
+canvas.addEventListener('click', async () => {
+  if (dialog.open || winDialog.open || document.pointerLockElement === canvas) return;
+  try { await canvas.requestPointerLock?.(); } catch { /* Arrow keys remain available if mouse capture is denied. */ }
+});
+document.addEventListener('pointerlockchange', () => keys.clear());
+document.addEventListener('mousemove', event => {
+  if (document.pointerLockElement !== canvas || dialog.open || winDialog.open) return;
+  state.player.angle += event.movementX * 0.0025;
+  state.player.pitch = Math.max(-0.65, Math.min(0.65, state.player.pitch - event.movementY * 0.0025));
+});
+
 let lastTime;
 function frame(time) {
   // Cap elapsed time so returning to a background tab cannot teleport the player.
   const seconds = lastTime === undefined ? 0 : Math.min((time - lastTime) / 1000, 0.05);
   lastTime = time;
   if (!dialog.open && !winDialog.open) {
-    const horizontal = Number(keys.has('d') || keys.has('arrowright')) - Number(keys.has('a') || keys.has('arrowleft'));
-    const vertical = Number(keys.has('s') || keys.has('arrowdown')) - Number(keys.has('w') || keys.has('arrowup'));
-    movePlayer(state, horizontal, vertical, seconds);
+    state.player.angle += (Number(keys.has('arrowright')) - Number(keys.has('arrowleft'))) * 1.9 * seconds;
+    const strafe = Number(keys.has('d')) - Number(keys.has('a'));
+    const forward = Number(keys.has('w') || keys.has('arrowup')) - Number(keys.has('s') || keys.has('arrowdown'));
+    movePlayer(state, strafe, forward, seconds);
   }
-  drawHouse(context, state);
+  drawHouse(context, state, time, document.pointerLockElement === canvas);
   const repair = nearestRepair(state);
-  interaction.textContent = repair ? `Press E to repair: ${repair.name}${repair.id === 'pipe' ? ' (not built yet)' : ''}` : 'Walk up to a damaged object to get started.';
+  interaction.textContent = repair ? `Press E to repair: ${repair.name}` : 'Explore the house. Face a damaged object and move close to repair it.';
   requestAnimationFrame(frame);
 }
 updateProgress();

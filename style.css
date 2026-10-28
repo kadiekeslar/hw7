@@ -29,3 +29,18 @@ button:focus-visible { outline: 3px solid #bd6a40; outline-offset: 3px; }
 .nail { border-radius: 50%; justify-self: center; width: 54px; height: 54px; padding: 0; background: #faeac9; border: 3px dashed #654b36; }
 .nail:disabled { opacity: 1; background: #56645c; color: white; border-style: solid; cursor: default; }
 @media (max-width: 600px) { main { padding: 18px 12px; } h1 { font-size: 33px; } header { gap: 8px; } #counter { font-size: 13px; padding: 10px; } .eyebrow { font-size: 9px; } }
+
+/* First-person viewport and the four-piece plumbing task. */
+main { max-width: 1240px; }
+#house { aspect-ratio: 5 / 3; cursor: crosshair; }
+.pipe-panel { max-width: 360px; margin: auto; }
+.pipe-end { margin: 9px 0; color: #427d91; font-size: 13px; font-weight: 800; letter-spacing: 1px; }
+.pipe-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; padding: 8px; background: #344e49; border-radius: 10px; }
+.pipe-tile { position: relative; aspect-ratio: 1; overflow: hidden; border: 2px solid #adc0af; border-radius: 5px; background: #e2e6d3; padding: 0; }
+.pipe-tile:hover { background: #f7efd4; }
+.pipe-arm { position: absolute; background: #5b93a5; box-shadow: inset 0 0 0 4px #91bdc5; }
+.port-0 { left: 40%; top: 0; width: 20%; height: 50%; }
+.port-1 { left: 50%; top: 40%; width: 50%; height: 20%; }
+.port-2 { left: 40%; top: 50%; width: 20%; height: 50%; }
+.port-3 { left: 0; top: 40%; width: 50%; height: 20%; }
+.pipe-joint { position: absolute; left: 38%; top: 38%; width: 24%; height: 24%; border-radius: 50%; border: 4px solid #91bdc5; background: #5b93a5; }
